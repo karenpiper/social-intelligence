@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/pipeline/run",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/digests/generate?type=daily",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/digests/generate?type=weekly",
+      "schedule": "0 9 * * 1"
+    }
+  ]
+}

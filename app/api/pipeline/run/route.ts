@@ -1,18 +1,10 @@
 /**
  * API Route: Run Pipeline
- * 
+ *
  * POST /api/pipeline/run
- * 
+ *
  * Triggers a full collection + analysis cycle.
- * In production, you'd call this from a cron job (Vercel Cron, GitHub Actions, etc.)
- * 
- * For Vercel, add to vercel.json:
- * {
- *   "crons": [{
- *     "path": "/api/pipeline/run",
- *     "schedule": "*/15 * * * *"
- *   }]
- * }
+ * In production, call from a cron (e.g. Vercel Cron). See vercel.json crons config.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

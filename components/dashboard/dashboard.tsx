@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import Link from 'next/link'
 import useSWR, { mutate } from 'swr'
 import { RefreshCw, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -90,8 +91,14 @@ export function Dashboard() {
               <Activity className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
+              <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
                 Social Intelligence
+                <Link
+                  href="/"
+                  className="text-xs font-normal text-muted-foreground hover:text-foreground"
+                >
+                  Methodology
+                </Link>
               </h1>
               <p className="text-sm text-muted-foreground">
                 Last updated:{' '}

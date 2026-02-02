@@ -177,6 +177,38 @@ export async function saveAnalysisBatch(
     
     await db.from('alerts').insert(alertsData);
   }
+
+  // Save communities/audiences (who discusses these themes; foundation for deeper intel later)
+  if (analysis.communities_identified?.length > 0) {
+    const now = new Date().toISOString();
+    const communitiesData = analysis.communities_identified.map((c: {
+      name: string;
+      description?: string;
+      primary_platform?: string;
+      audience_type?: string;
+      size_indicator?: string;
+      sentiment_toward_claude?: number;
+      key_concerns?: string[];
+      opportunities?: string[];
+      gathering_places?: string[];
+    }) => ({
+      name: c.name,
+      description: c.description ?? null,
+      primary_platform: c.primary_platform ?? null,
+      audience_type: c.audience_type ?? 'general',
+      estimated_size: c.size_indicator ?? null,
+      key_topics: c.key_concerns ?? [], // reuse for topic-like signals
+      sentiment_toward_claude: c.sentiment_toward_claude ?? null,
+      first_identified_at: now,
+      last_activity_at: now,
+      notes: JSON.stringify({
+        key_concerns: c.key_concerns ?? [],
+        opportunities: c.opportunities ?? [],
+        gathering_places: c.gathering_places ?? [],
+      }),
+    }));
+    await db.from('communities').insert(communitiesData);
+  }
   
   return batchId;
 }
@@ -195,13 +227,22 @@ export async function getDashboardData() {
     .gte('timestamp', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     .order('timestamp', { ascending: true });
   
-  // Get top themes
+  // Get top themes (include example_posts and last_seen_at for auditability)
   const { data: themes } = await db
     .from('themes')
-    .select('name, description, frequency, sentiment_avg, audience_type, is_emerging')
+    .select('name, description, frequency, sentiment_avg, audience_type, is_emerging, example_posts, last_seen_at')
     .gte('last_seen_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
     .order('frequency', { ascending: false })
     .limit(10);
+
+  // Latest post timestamp (for "data through" / auditability)
+  const { data: latestPost } = await db
+    .from('posts')
+    .select('collected_at, posted_at')
+    .order('collected_at', { ascending: false })
+    .limit(1)
+    .single();
+  const latestPostAt = latestPost?.posted_at ?? latestPost?.collected_at ?? null;
   
   // Get competitor share of voice
   const { data: competitors } = await db
@@ -219,6 +260,14 @@ export async function getDashboardData() {
     .eq('is_acknowledged', false)
     .order('created_at', { ascending: false })
     .limit(10);
+
+  // Get communities/audiences (identified from themes; foundation for deeper intel)
+  const { data: communities } = await db
+    .from('communities')
+    .select('id, name, description, primary_platform, audience_type, estimated_size, key_topics, sentiment_toward_claude, last_activity_at, notes')
+    .gte('last_activity_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .order('last_activity_at', { ascending: false })
+    .limit(20);
   
   // Get recent post count by platform
   const { data: postCounts } = await db
@@ -234,7 +283,9 @@ export async function getDashboardData() {
     competitorStats,
     alerts: alerts || [],
     platformCounts,
-    lastUpdated: new Date().toISOString()
+    communities: communities || [],
+    lastUpdated: new Date().toISOString(),
+    latestPostAt: latestPostAt ?? undefined,
   };
 }
 
@@ -262,6 +313,28 @@ function aggregatePlatformCounts(posts: Array<{ platform_id: string }>) {
     counts[p.platform_id] = (counts[p.platform_id] || 0) + 1;
   }
   return counts;
+}
+
+// ============================================
+// POSTS BY ID (for theme drill-down / auditability)
+// ============================================
+
+export async function getPostsByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+  const db = getSupabase();
+  const { data, error } = await db
+    .from('posts')
+    .select('id, url, platform_id, posted_at, collected_at, content, author')
+    .in('id', ids);
+  if (error) throw error;
+  return (data || []).map((p) => ({
+    id: p.id,
+    url: p.url ?? null,
+    platform_id: p.platform_id ?? 'unknown',
+    posted_at: p.posted_at ?? p.collected_at ?? new Date().toISOString(),
+    content_snippet: typeof p.content === 'string' ? p.content.slice(0, 200) + (p.content.length > 200 ? '…' : '') : '',
+    author: p.author ?? '—',
+  }));
 }
 
 // ============================================

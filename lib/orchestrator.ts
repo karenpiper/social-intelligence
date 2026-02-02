@@ -147,7 +147,16 @@ export async function runDailyDigest(): Promise<string> {
       key_narratives: [],
       comparison_posts: []
     })),
-    communities: [],
+    communities: (dashboardData as any).communities?.map((c: any) => ({
+      name: c.name,
+      description: c.description ?? '',
+      primary_platform: c.primary_platform ?? '',
+      audience_type: c.audience_type ?? 'general',
+      size_indicator: c.estimated_size ?? 'medium',
+      sentiment_toward_claude: c.sentiment_toward_claude ?? 0,
+      key_concerns: c.notes_parsed?.key_concerns ?? [],
+      opportunities: c.notes_parsed?.opportunities ?? [],
+    })) ?? [],
     alerts: dashboardData.alerts as any,
     enterprise: {
       count: 0,
@@ -202,7 +211,16 @@ export async function runWeeklyDigest(): Promise<string> {
       key_narratives: [],
       comparison_posts: []
     })),
-    communities: [],
+    communities: (dashboardData as any).communities?.map((c: any) => ({
+      name: c.name,
+      description: c.description ?? '',
+      primary_platform: c.primary_platform ?? '',
+      audience_type: c.audience_type ?? 'general',
+      size_indicator: c.estimated_size ?? 'medium',
+      sentiment_toward_claude: c.sentiment_toward_claude ?? 0,
+      key_concerns: c.notes_parsed?.key_concerns ?? [],
+      opportunities: c.notes_parsed?.opportunities ?? [],
+    })) ?? [],
     alerts: dashboardData.alerts as any,
     enterprise: {
       count: 0,

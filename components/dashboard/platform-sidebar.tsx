@@ -26,6 +26,9 @@ export function PlatformSidebar({ platformCounts }: PlatformSidebarProps) {
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Platform Mix
         </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1" title="Post count by source in the last 24 hours (collected posts matching AI-industry keywords).">
+          Post count by source (last 24h). 🔴 Reddit · 🟠 Hacker News · 🔵 Bluesky
+        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {Object.entries(platformCounts).map(([platform, count]) => {

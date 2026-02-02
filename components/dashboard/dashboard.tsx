@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AlertsBanner } from './alerts-banner'
 import { OverviewTab } from './overview-tab'
 import { ThemesTab } from './themes-tab'
+import { AudiencesTab } from './audiences-tab'
 import { CompetitorsTab } from './competitors-tab'
 import { DigestTab } from './digest-tab'
 import { DashboardData, Digest } from '@/lib/types'
@@ -100,8 +101,8 @@ export function Dashboard() {
                   Methodology
                 </Link>
               </h1>
-              <p className="text-sm text-muted-foreground">
-                Last updated:{' '}
+              <p className="text-sm text-muted-foreground" title="When this dashboard payload was generated (server time).">
+                Dashboard generated:{' '}
                 {dashboardData?.lastUpdated
                   ? (() => {
                       const d = new Date(dashboardData.lastUpdated);
@@ -109,6 +110,14 @@ export function Dashboard() {
                     })()
                   : 'Loading...'}
               </p>
+              {dashboardData?.latestPostAt && (
+                <p className="text-xs text-muted-foreground mt-0.5" title="Latest post timestamp in the database; all metrics are based on data through this point (auditability).">
+                  Data through: {(() => {
+                    const d = new Date(dashboardData.latestPostAt);
+                    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+                  })()}
+                </p>
+              )}
             </div>
           </div>
           <Button
@@ -146,6 +155,7 @@ export function Dashboard() {
             <TabsList className="bg-secondary/50">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="themes">Themes</TabsTrigger>
+              <TabsTrigger value="audiences">Audiences</TabsTrigger>
               <TabsTrigger value="competitors">Competitors</TabsTrigger>
               <TabsTrigger value="digest">Digest</TabsTrigger>
             </TabsList>
@@ -156,6 +166,10 @@ export function Dashboard() {
 
             <TabsContent value="themes">
               <ThemesTab themes={dashboardData.themes} />
+            </TabsContent>
+
+            <TabsContent value="audiences">
+              <AudiencesTab communities={dashboardData.communities ?? []} />
             </TabsContent>
 
             <TabsContent value="competitors">

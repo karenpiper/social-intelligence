@@ -105,7 +105,7 @@ export default function LandingPage() {
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <LayoutDashboard className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <strong className="text-foreground">Dashboard</strong> — Sentiment trend, top themes, competitor share of voice, and active alerts.
+                  <strong className="text-foreground">Dashboard</strong> — Sentiment trend, themes, <strong className="text-foreground">audiences/communities</strong> (who discusses them), competitor share of voice, and alerts.
                 </li>
                 <li className="flex items-center gap-2">
                   <Bell className="h-3.5 w-3.5 text-primary shrink-0" />

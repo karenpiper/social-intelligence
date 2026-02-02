@@ -46,16 +46,76 @@ function mapAlerts(
   }));
 }
 
+function mapThemes(raw: Array<{
+  name?: string;
+  description?: string;
+  frequency?: number;
+  sentiment_avg?: number;
+  audience_type?: string;
+  is_emerging?: boolean;
+  example_posts?: string[] | null;
+  last_seen_at?: string | null;
+}>) {
+  return raw.map((t) => ({
+    name: t.name ?? '',
+    description: t.description ?? '',
+    frequency: t.frequency ?? 0,
+    sentiment_avg: t.sentiment_avg ?? 0,
+    audience_type: t.audience_type ?? 'general',
+    is_emerging: t.is_emerging ?? false,
+    example_post_ids: t.example_posts ?? [],
+    last_seen_at: t.last_seen_at ? toValidISO(t.last_seen_at) : undefined,
+  }));
+}
+
+function mapCommunities(raw: Array<{
+  id?: string;
+  name?: string;
+  description?: string | null;
+  primary_platform?: string | null;
+  audience_type?: string | null;
+  estimated_size?: string | null;
+  key_topics?: string[] | null;
+  sentiment_toward_claude?: number | null;
+  last_activity_at?: string | null;
+  notes?: string | null;
+}>) {
+  return raw.map((c) => {
+    let notes_parsed: { key_concerns?: string[]; opportunities?: string[]; gathering_places?: string[] } | undefined;
+    if (c.notes) {
+      try {
+        notes_parsed = JSON.parse(c.notes);
+      } catch {
+        notes_parsed = undefined;
+      }
+    }
+    return {
+      id: c.id ?? '',
+      name: c.name ?? '',
+      description: c.description ?? null,
+      primary_platform: c.primary_platform ?? null,
+      audience_type: c.audience_type ?? 'general',
+      estimated_size: c.estimated_size ?? null,
+      key_topics: c.key_topics ?? [],
+      sentiment_toward_claude: c.sentiment_toward_claude ?? null,
+      last_activity_at: toValidISO(c.last_activity_at),
+      notes_parsed,
+    };
+  });
+}
+
 export async function GET() {
   try {
     const data = await getDashboardData();
     const payload = {
       sentimentTrend: mapSentimentTrend(data.sentimentTrend as any),
-      themes: data.themes,
+      themes: mapThemes(data.themes as any),
       competitorStats: data.competitorStats,
       alerts: mapAlerts(data.alerts as any),
       platformCounts: data.platformCounts,
+      communities: mapCommunities((data as any).communities ?? []),
       lastUpdated: data.lastUpdated,
+      latestPostAt: data.latestPostAt ?? undefined,
     };
     return NextResponse.json(payload);
   } catch (error) {

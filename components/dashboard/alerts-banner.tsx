@@ -38,6 +38,9 @@ export function AlertsBanner({ alerts, onDismiss }: AlertsBannerProps) {
 
   return (
     <div className="space-y-2 mb-6">
+      <p className="text-xs text-muted-foreground mb-2" title="Alerts are triggered by Claude when thresholds or patterns are met (e.g. emerging theme, sentiment shift).">
+        Alerts: triggered by Claude from analyzed posts. Severity: Low (info) · Medium · High · Critical.
+      </p>
       {alerts.map((alert) => {
         const config = severityConfig[alert.severity]
         const Icon = config.icon

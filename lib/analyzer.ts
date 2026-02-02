@@ -76,7 +76,8 @@ Provide your analysis in the following JSON structure:
       "size_indicator": "small|medium|large",
       "sentiment_toward_claude": <-1 to 1>,
       "key_concerns": ["What they care about"],
-      "opportunities": ["How to better serve them"]
+      "opportunities": ["How to better serve them"],
+      "gathering_places": ["Specific places where this community discusses: subreddit names (e.g. r/LocalLLaMA), Bluesky hashtags, HN keywords, etc. Use for future scraping/intel."]
     }
   ],
   
@@ -166,6 +167,8 @@ interface Community {
   sentiment_toward_claude: number;
   key_concerns: string[];
   opportunities: string[];
+  /** Where this community gathers (subreddits, hashtags, etc.) — seeds for future scraping/intel. */
+  gathering_places?: string[];
 }
 
 interface Alert {

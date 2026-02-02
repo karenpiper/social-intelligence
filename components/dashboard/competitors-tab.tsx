@@ -37,6 +37,9 @@ export function CompetitorsTab({ competitors }: CompetitorsTabProps) {
           <CardTitle className="text-sm font-medium text-muted-foreground">
             Share of Voice
           </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1" title="Number of posts that mention each competitor (from Claude analysis of collected posts).">
+            Mention count per competitor in analyzed posts (Claude-extracted).
+          </p>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">

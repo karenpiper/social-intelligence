@@ -71,6 +71,9 @@ export function SentimentChart({ data }: SentimentChartProps) {
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Sentiment Trend (7 Days)
         </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1" title="Sentiment is scored by Claude from post content; -1 = negative, 1 = positive. Aggregated by day from analyzed batches.">
+          Sentiment: -1 (negative) to 1 (positive). Aggregated from analyzed posts by day.
+        </p>
       </CardHeader>
       <CardContent>
         <div className="h-[280px]">

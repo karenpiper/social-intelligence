@@ -14,9 +14,10 @@ import { runPipeline } from '@/lib/orchestrator';
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function POST(request: NextRequest) {
-  // Optional: Verify this is a legitimate cron call
+  // Only reject when an Authorization header is sent but wrong (cron must use correct secret).
+  // Requests without a header (e.g. "Refresh Data" button) are allowed.
   const authHeader = request.headers.get('authorization');
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (CRON_SECRET && authHeader != null && authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   

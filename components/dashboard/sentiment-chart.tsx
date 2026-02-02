@@ -48,6 +48,23 @@ export function SentimentChart({ data }: SentimentChartProps) {
       .slice(-7)
   }, [data])
 
+  if (chartData.length === 0) {
+    return (
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Sentiment Trend (7 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+            No sentiment data yet. Run the pipeline or wait for data to collect.
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
@@ -61,18 +78,18 @@ export function SentimentChart({ data }: SentimentChartProps) {
             <LineChart data={chartData}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--border)"
                 vertical={false}
               />
               <XAxis
                 dataKey="date"
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 domain={[-1, 1]}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => value.toFixed(1)}
@@ -110,9 +127,9 @@ export function SentimentChart({ data }: SentimentChartProps) {
               <Line
                 type="monotone"
                 dataKey="sentiment"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth={2}
-                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
+                dot={{ fill: 'var(--primary)', strokeWidth: 0, r: 4 }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
               />
             </LineChart>

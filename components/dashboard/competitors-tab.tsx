@@ -28,6 +28,8 @@ export function CompetitorsTab({ competitors }: CompetitorsTabProps) {
     mentions: c.mentions,
   }))
 
+  const hasChartData = chartData.length > 0
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <Card className="bg-card border-border">
@@ -38,6 +40,11 @@ export function CompetitorsTab({ competitors }: CompetitorsTabProps) {
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
+            {!hasChartData ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No competitor data yet.
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -46,19 +53,19 @@ export function CompetitorsTab({ competitors }: CompetitorsTabProps) {
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="hsl(var(--border))"
+                  stroke="var(--border)"
                   horizontal={false}
                 />
                 <XAxis
                   type="number"
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
                   dataKey="name"
                   type="category"
-                  tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
+                  tick={{ fill: 'var(--foreground)', fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
                   width={100}
@@ -86,11 +93,12 @@ export function CompetitorsTab({ competitors }: CompetitorsTabProps) {
                 />
                 <Bar
                   dataKey="mentions"
-                  fill="hsl(var(--primary))"
+                  fill="var(--primary)"
                   radius={[0, 4, 4, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>

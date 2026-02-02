@@ -37,6 +37,10 @@ export interface CommunitySummary {
   last_activity_at: string;
   /** key_concerns, opportunities, gathering_places (for future scraping/intel) */
   notes_parsed?: { key_concerns?: string[]; opportunities?: string[]; gathering_places?: string[] };
+  /** Decision-making: trend vs previous 7-day period. */
+  trend?: 'growing' | 'shrinking' | 'stable';
+  /** Decision-making: volume / loudness (from size or activity). */
+  volume_indicator?: 'loud' | 'medium' | 'quiet';
 }
 
 export interface Alert {

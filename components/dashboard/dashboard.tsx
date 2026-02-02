@@ -3,10 +3,9 @@
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import useSWR, { mutate } from 'swr'
-import { RefreshCw, Activity } from 'lucide-react'
+import { RefreshCw, Activity, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AlertsBanner } from './alerts-banner'
 import { OverviewTab } from './overview-tab'
 import { ThemesTab } from './themes-tab'
 import { AudiencesTab } from './audiences-tab'
@@ -43,19 +42,6 @@ export function Dashboard() {
       console.error('Failed to refresh data:', error)
     } finally {
       setIsRefreshing(false)
-    }
-  }, [])
-
-  const handleDismissAlert = useCallback(async (alertId: string) => {
-    try {
-      await fetch('/api/alerts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ alertId }),
-      })
-      await mutate('/api/dashboard')
-    } catch (error) {
-      console.error('Failed to dismiss alert:', error)
     }
   }, [])
 
@@ -120,32 +106,37 @@ export function Dashboard() {
               )}
             </div>
           </div>
-          <Button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            {isRefreshing ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/alerts">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Bell className="h-4 w-4" />
+                Alerts
+                {dashboardData && dashboardData.alerts.length > 0 && (
+                  <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs">
+                    {dashboardData.alerts.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            <Button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Data
+                </>
+              )}
+            </Button>
+          </div>
         </header>
-
-        {/* Alerts Banner */}
-        {dashboardData && (
-          <AlertsBanner
-            alerts={dashboardData.alerts}
-            onDismiss={handleDismissAlert}
-          />
-        )}
 
         {/* Main Content */}
         {isDashboardLoading ? (

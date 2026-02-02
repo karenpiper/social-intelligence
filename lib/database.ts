@@ -262,13 +262,89 @@ export async function getDashboardData() {
     .limit(10);
 
   // Get communities/audiences (identified from themes; foundation for deeper intel)
-  const { data: communities } = await db
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  let communities: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    primary_platform: string | null;
+    audience_type: string | null;
+    estimated_size: string | null;
+    key_topics: string[];
+    sentiment_toward_claude: number | null;
+    last_activity_at: string;
+    notes: string | null;
+  }> = [];
+  const { data: communitiesRows } = await db
     .from('communities')
     .select('id, name, description, primary_platform, audience_type, estimated_size, key_topics, sentiment_toward_claude, last_activity_at, notes')
-    .gte('last_activity_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .gte('last_activity_at', sevenDaysAgo)
     .order('last_activity_at', { ascending: false })
-    .limit(20);
-  
+    .limit(50);
+  if (communitiesRows?.length) {
+    communities = communitiesRows as typeof communities;
+  } else {
+    // Fallback: derive from latest analysis batch raw_analysis (so tab isn't empty before next pipeline run)
+    const { data: latestBatch } = await db
+      .from('analysis_batches')
+      .select('id, analyzed_at, raw_analysis')
+      .order('analyzed_at', { ascending: false })
+      .limit(1)
+      .single();
+    const raw = latestBatch?.raw_analysis as { communities_identified?: Array<{
+      name?: string;
+      description?: string;
+      primary_platform?: string;
+      audience_type?: string;
+      size_indicator?: string;
+      sentiment_toward_claude?: number;
+      key_concerns?: string[];
+      opportunities?: string[];
+      gathering_places?: string[];
+    }> } | null;
+    const batchList = raw?.communities_identified ?? [];
+    const batchTime = latestBatch?.analyzed_at ?? new Date().toISOString();
+    communities = batchList.map((c, i) => ({
+      id: `batch-${latestBatch?.id ?? 'unknown'}-${i}`,
+      name: c.name ?? 'Unknown community',
+      description: c.description ?? null,
+      primary_platform: c.primary_platform ?? null,
+      audience_type: c.audience_type ?? 'general',
+      estimated_size: c.size_indicator ?? null,
+      key_topics: c.key_concerns ?? [],
+      sentiment_toward_claude: c.sentiment_toward_claude ?? null,
+      last_activity_at: batchTime,
+      notes: JSON.stringify({
+        key_concerns: c.key_concerns ?? [],
+        opportunities: c.opportunities ?? [],
+        gathering_places: c.gathering_places ?? [],
+      }),
+    }));
+  }
+
+  // Trend & volume: compare current period (last 7d) vs previous (7–14d) for decision-making
+  let communityTrendMap: Record<string, { current: number; previous: number }> = {};
+  const { data: previousCommunities } = await db
+    .from('communities')
+    .select('name')
+    .gte('last_activity_at', fourteenDaysAgo)
+    .lt('last_activity_at', sevenDaysAgo);
+  const currentByName: Record<string, number> = {};
+  const previousByName: Record<string, number> = {};
+  for (const c of communities) {
+    currentByName[c.name] = (currentByName[c.name] ?? 0) + 1;
+  }
+  for (const c of previousCommunities ?? []) {
+    previousByName[c.name ?? ''] = (previousByName[c.name ?? ''] ?? 0) + 1;
+  }
+  for (const name of [...new Set([...Object.keys(currentByName), ...Object.keys(previousByName)])]) {
+    communityTrendMap[name] = {
+      current: currentByName[name] ?? 0,
+      previous: previousByName[name] ?? 0,
+    };
+  }
+
   // Get recent post count by platform
   const { data: postCounts } = await db
     .from('posts')
@@ -283,7 +359,8 @@ export async function getDashboardData() {
     competitorStats,
     alerts: alerts || [],
     platformCounts,
-    communities: communities || [],
+    communities,
+    communityTrendMap,
     lastUpdated: new Date().toISOString(),
     latestPostAt: latestPostAt ?? undefined,
   };

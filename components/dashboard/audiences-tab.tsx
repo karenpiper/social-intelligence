@@ -1,8 +1,14 @@
 'use client'
 
-import { Users, MapPin, Lightbulb, AlertCircle } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from 'react'
+import { Users, MapPin, Lightbulb, AlertCircle, ChevronDown, ChevronRight, TrendingUp, TrendingDown, Minus, Volume2, Volume1, VolumeX } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { CommunitySummary } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +24,30 @@ const audienceColors: Record<string, string> = {
   general: 'bg-secondary text-secondary-foreground',
 }
 
+const trendConfig = {
+  growing: { label: 'Growing', icon: TrendingUp, className: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30' },
+  shrinking: { label: 'Shrinking', icon: TrendingDown, className: 'text-amber-500 bg-amber-500/10 border-amber-500/30' },
+  stable: { label: 'Stable', icon: Minus, className: 'text-muted-foreground bg-secondary border-border' },
+}
+
+const volumeConfig = {
+  loud: { label: 'Loud', icon: Volume2, className: 'text-primary' },
+  medium: { label: 'Medium', icon: Volume1, className: 'text-muted-foreground' },
+  quiet: { label: 'Quiet', icon: VolumeX, className: 'text-muted-foreground/70' },
+}
+
 export function AudiencesTab({ communities }: AudiencesTabProps) {
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+
+  const toggleOpen = (id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   if (communities.length === 0) {
     return (
       <div className="space-y-6">
@@ -50,128 +79,148 @@ export function AudiencesTab({ communities }: AudiencesTabProps) {
         <p className="font-medium text-foreground mb-1">Audiences / Communities</p>
         <p>
           These are audience segments Claude identified from collected posts — <strong className="text-foreground">who</strong> is discussing the themes we track.
-          Each community has a primary platform, key concerns, and opportunities. Where available, we store &quot;gathering places&quot; (e.g. subreddits, hashtags) as seeds for future scraping or deeper intel (interests, other topics).
-        </p>
-        <p className="mt-2 text-xs">
-          Future: enrich these with more intelligence (scraping, interests, related topics) to prioritize and understand each community better.
+          All communities are stored in the database; this page shows only those <strong className="text-foreground">active in the last 7 days</strong>.
+          Use <strong className="text-foreground">trend</strong> (growing / shrinking / stable vs. previous 7 days) and <strong className="text-foreground">volume</strong> (loud / medium / quiet) for decision-making.
+          Expand a row for full details.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-2">
         {communities.map((community) => {
           const notes = community.notes_parsed
           const gatheringPlaces = notes?.gathering_places ?? []
           const keyConcerns = notes?.key_concerns ?? []
           const opportunities = notes?.opportunities ?? []
+          const isOpen = openIds.has(community.id)
+          const trend = community.trend ?? 'stable'
+          const volume = community.volume_indicator ?? 'medium'
+          const TrendIcon = trendConfig[trend].icon
+          const VolumeIcon = volumeConfig[volume].icon
 
           return (
-            <Card key={community.id} className="bg-card border-border">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-base font-medium text-foreground">
-                    {community.name}
-                  </CardTitle>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-xs capitalize',
-                      audienceColors[community.audience_type] ?? 'bg-secondary text-secondary-foreground'
-                    )}
+            <Collapsible
+              key={community.id}
+              open={isOpen}
+              onOpenChange={() => toggleOpen(community.id)}
+            >
+              <Card className="bg-card border-border">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg"
                   >
-                    {community.audience_type}
-                  </Badge>
-                  {community.primary_platform && (
-                    <Badge variant="outline" className="text-xs">
-                      {community.primary_platform}
-                    </Badge>
-                  )}
-                  {community.estimated_size && (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">
-                      {community.estimated_size}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {community.description && (
-                  <p className="text-sm text-muted-foreground">{community.description}</p>
-                )}
-
-                {community.sentiment_toward_claude != null && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Sentiment toward Claude:</span>
-                    <span
-                      className={cn(
-                        'font-medium',
-                        community.sentiment_toward_claude >= 0 ? 'text-emerald-400' : 'text-red-400'
-                      )}
-                    >
-                      {community.sentiment_toward_claude.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {keyConcerns.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      Key concerns
-                    </p>
-                    <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
-                      {keyConcerns.slice(0, 5).map((c, i) => (
-                        <li key={i}>{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {opportunities.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
-                      <Lightbulb className="h-3 w-3" />
-                      Opportunities
-                    </p>
-                    <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
-                      {opportunities.slice(0, 5).map((o, i) => (
-                        <li key={i}>{o}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {gatheringPlaces.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      Where they gather (seeds for future intel)
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {gatheringPlaces.map((g, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs font-normal">
-                          {g}
+                    <CardHeader className="py-3 px-4 flex flex-row items-center gap-3">
+                      <span className="text-muted-foreground shrink-0">
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </span>
+                      <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-foreground">{community.name}</span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-xs capitalize',
+                            audienceColors[community.audience_type] ?? 'bg-secondary text-secondary-foreground'
+                          )}
+                        >
+                          {community.audience_type}
                         </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                        {community.primary_platform && (
+                          <Badge variant="outline" className="text-xs">
+                            {community.primary_platform}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={cn('text-xs', trendConfig[trend].className)}>
+                          <TrendIcon className="h-3 w-3 mr-1" />
+                          {trendConfig[trend].label}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          <VolumeIcon className="h-3 w-3 mr-1" />
+                          {volumeConfig[volume].label}
+                        </Badge>
+                        {community.estimated_size && (
+                          <span className="text-xs text-muted-foreground">{community.estimated_size}</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        Last seen: {new Date(community.last_activity_at).toLocaleDateString()}
+                      </span>
+                    </CardHeader>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 px-4 pb-4 border-t border-border space-y-4">
+                    {community.description && (
+                      <p className="text-sm text-muted-foreground pt-3">{community.description}</p>
+                    )}
 
-                {community.key_topics.length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Topics: {community.key_topics.slice(0, 5).join(', ')}
-                      {community.key_topics.length > 5 ? '…' : ''}
-                    </p>
-                  </div>
-                )}
+                    {community.sentiment_toward_claude != null && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Sentiment toward Claude:</span>
+                        <span
+                          className={cn(
+                            'font-medium',
+                            community.sentiment_toward_claude >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          )}
+                        >
+                          {community.sentiment_toward_claude.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
 
-                <p className="text-xs text-muted-foreground pt-2 border-t border-border">
-                  Last seen: {new Date(community.last_activity_at).toLocaleDateString()}
-                </p>
-              </CardContent>
-            </Card>
+                    {keyConcerns.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Key concerns
+                        </p>
+                        <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
+                          {keyConcerns.slice(0, 5).map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {opportunities.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
+                          <Lightbulb className="h-3 w-3" />
+                          Opportunities
+                        </p>
+                        <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
+                          {opportunities.slice(0, 5).map((o, i) => (
+                            <li key={i}>{o}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {gatheringPlaces.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Where they gather (seeds for future intel)
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {gatheringPlaces.map((g, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs font-normal">
+                              {g}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {community.key_topics.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Topics: {community.key_topics.slice(0, 5).join(', ')}
+                        {community.key_topics.length > 5 ? '…' : ''}
+                      </p>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           )
         })}
       </div>

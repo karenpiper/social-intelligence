@@ -68,19 +68,41 @@ function mapThemes(raw: Array<{
   }));
 }
 
-function mapCommunities(raw: Array<{
-  id?: string;
-  name?: string;
-  description?: string | null;
-  primary_platform?: string | null;
-  audience_type?: string | null;
-  estimated_size?: string | null;
-  key_topics?: string[] | null;
-  sentiment_toward_claude?: number | null;
-  last_activity_at?: string | null;
-  notes?: string | null;
-}>) {
-  return raw.map((c) => {
+function trendFromCounts(current: number, previous: number): 'growing' | 'shrinking' | 'stable' {
+  if (current > previous) return 'growing';
+  if (current < previous) return 'shrinking';
+  return 'stable';
+}
+
+function volumeFromSizeAndCount(estimated_size: string | null, count: number): 'loud' | 'medium' | 'quiet' {
+  if (estimated_size === 'large' || count >= 3) return 'loud';
+  if (estimated_size === 'small' && count <= 1) return 'quiet';
+  return 'medium';
+}
+
+function mapCommunities(
+  raw: Array<{
+    id?: string;
+    name?: string;
+    description?: string | null;
+    primary_platform?: string | null;
+    audience_type?: string | null;
+    estimated_size?: string | null;
+    key_topics?: string[] | null;
+    sentiment_toward_claude?: number | null;
+    last_activity_at?: string | null;
+    notes?: string | null;
+  }>,
+  trendMap: Record<string, { current: number; previous: number }> = {}
+) {
+  const byName = new Map<string, typeof raw[0]>();
+  for (const c of raw) {
+    const name = c.name ?? '';
+    if (!byName.has(name) || (c.last_activity_at && byName.get(name)!.last_activity_at && c.last_activity_at > byName.get(name)!.last_activity_at!)) {
+      byName.set(name, c);
+    }
+  }
+  return Array.from(byName.entries()).map(([name, c]) => {
     let notes_parsed: { key_concerns?: string[]; opportunities?: string[]; gathering_places?: string[] } | undefined;
     if (c.notes) {
       try {
@@ -89,6 +111,9 @@ function mapCommunities(raw: Array<{
         notes_parsed = undefined;
       }
     }
+    const counts = trendMap[name] ?? { current: 1, previous: 0 };
+    const trend = trendFromCounts(counts.current, counts.previous);
+    const volume_indicator = volumeFromSizeAndCount(c.estimated_size ?? null, counts.current);
     return {
       id: c.id ?? '',
       name: c.name ?? '',
@@ -100,6 +125,8 @@ function mapCommunities(raw: Array<{
       sentiment_toward_claude: c.sentiment_toward_claude ?? null,
       last_activity_at: toValidISO(c.last_activity_at),
       notes_parsed,
+      trend,
+      volume_indicator,
     };
   });
 }
@@ -113,7 +140,7 @@ export async function GET() {
       competitorStats: data.competitorStats,
       alerts: mapAlerts(data.alerts as any),
       platformCounts: data.platformCounts,
-      communities: mapCommunities((data as any).communities ?? []),
+      communities: mapCommunities((data as any).communities ?? [], (data as any).communityTrendMap ?? {}),
       lastUpdated: data.lastUpdated,
       latestPostAt: data.latestPostAt ?? undefined,
     };

@@ -1,14 +1,24 @@
 /**
  * Claude Analysis Engine
- * 
+ *
  * This module handles sending batches of social posts to Claude
  * for theme extraction, sentiment analysis, and community identification.
+ * Set DISABLE_CLAUDE_ANALYSIS=true or leave ANTHROPIC_API_KEY empty to avoid any API calls (no cost).
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 
-// Initialize the client (uses ANTHROPIC_API_KEY env var)
-const anthropic = new Anthropic();
+function isClaudeDisabled(): boolean {
+  if (process.env.DISABLE_CLAUDE_ANALYSIS === 'true') return true;
+  const key = process.env.ANTHROPIC_API_KEY;
+  return !key || key.trim() === '' || key.startsWith('your-');
+}
+
+let _anthropic: InstanceType<typeof Anthropic> | null = null;
+function getAnthropic(): InstanceType<typeof Anthropic> {
+  if (!_anthropic) _anthropic = new Anthropic();
+  return _anthropic;
+}
 
 // ============================================
 // ANALYSIS PROMPTS
@@ -189,7 +199,22 @@ interface EnterpriseSignals {
 
 export async function analyzePostBatch(input: AnalysisInput): Promise<AnalysisResult> {
   const startTime = Date.now();
-  
+
+  if (isClaudeDisabled()) {
+    console.warn('Claude analysis disabled (DISABLE_CLAUDE_ANALYSIS or missing ANTHROPIC_API_KEY). Returning stub result; no API calls.');
+    return {
+      summary: 'Analysis skipped (Claude disabled).',
+      themes: [],
+      sentiment_breakdown: { overall: 0, positive_count: 0, neutral_count: 0, negative_count: 0, key_drivers: [] },
+      competitor_analysis: [],
+      communities_identified: [],
+      alerts: [],
+      enterprise_signals: { count: 0, topics: [], pain_points: [], evaluation_criteria: [] },
+      raw_response: '',
+      processing_time_ms: Date.now() - startTime,
+    };
+  }
+
   // Prepare posts for analysis (trim to essential fields to save tokens)
   const postsForAnalysis = input.posts.map(p => ({
     id: p.id,
@@ -207,7 +232,7 @@ export async function analyzePostBatch(input: AnalysisInput): Promise<AnalysisRe
   );
   
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: ANALYSIS_SYSTEM_PROMPT,
@@ -267,7 +292,10 @@ export async function generateDigest(
     periodEnd: string;
   }
 ): Promise<{ content: string; summary: string; key_insights: string[] }> {
-  
+  if (isClaudeDisabled()) {
+    throw new Error('Claude is disabled (DISABLE_CLAUDE_ANALYSIS or missing ANTHROPIC_API_KEY). Digest generation skipped to avoid API cost.');
+  }
+
   const prompt = `Generate a ${type} digest report based on the following social intelligence data from ${data.periodStart} to ${data.periodEnd}.
 
 Total posts analyzed: ${data.postCount}
@@ -307,7 +335,7 @@ Format in Markdown. Be specific and cite data points. End with a JSON block cont
 }
 \`\`\``;
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 4096,
     system: DIGEST_SYSTEM_PROMPT,
